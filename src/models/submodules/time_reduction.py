@@ -37,7 +37,8 @@ class TimeReductionLayer(tf.keras.layers.Layer):
         _pad_mask = tf.expand_dims(tf.expand_dims(pad_mask, -1), -1)
         outputs = outputs * tf.cast(_pad_mask, "float32")
         padding = max(0, self.kernel_size - self.stride)
-        outputs = tf.pad(outputs, [[0, 0], [0, padding], [0, 0], [0, 0]])
+        # pad left for streaming ASR
+        outputs = tf.pad(outputs, [[0, 0], [padding, 0], [0, 0], [0, 0]])
         outputs = self.dw_conv(outputs, training=training)
         outputs = self.pw_conv(outputs, training=training)
         B, T, _, E = shape_util.shape_list(outputs)
