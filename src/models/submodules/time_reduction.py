@@ -31,14 +31,18 @@ class TimeReductionLayer(tf.keras.layers.Layer):
             kernel_initializer=tf.keras.initializers.RandomUniform(minval=-pw_max, maxval=pw_max),
             bias_initializer=tf.keras.initializers.RandomUniform(minval=-pw_max, maxval=pw_max),
         )
-    def call(self, inputs, training=False, mask=None, pad_mask=None, **kwargs):
+    def call(self, inputs, training=False, mask=None, pad_mask=None, dw_conv_cache=None, **kwargs):
         B, T, E = shape_util.shape_list(inputs)
         outputs = tf.reshape(inputs, [B, T, 1, E])
         _pad_mask = tf.expand_dims(tf.expand_dims(pad_mask, -1), -1)
         outputs = outputs * tf.cast(_pad_mask, "float32")
         padding = max(0, self.kernel_size - self.stride)
-        # pad left for streaming ASR
-        outputs = tf.pad(outputs, [[0, 0], [padding, 0], [0, 0], [0, 0]])
+        if dw_conv_cache is None:
+            # pad zeors left for streaming ASR support.
+            outputs = tf.pad(outputs, [[0, 0], [padding, 0], [0, 0], [0, 0]])
+        else:
+            # pad cache left for streaming ASR decoding.
+            outputs = tf.concat([dw_conv_cache], axis=1)
         outputs = self.dw_conv(outputs, training=training)
         outputs = self.pw_conv(outputs, training=training)
         B, T, _, E = shape_util.shape_list(outputs)
